@@ -4,6 +4,7 @@
 能够根据用户的问题，以及LLM的判断，来决定是否使用Tools中的retriever。
 后续会加入记忆功能。
 """
+from langchain_core.messages import AIMessage
 
 import re
 def build_rag():
@@ -26,7 +27,7 @@ def build_rag():
 
     embeddings = DashScopeEmbeddings(model = "text-embedding-v3")
 
-    vector_store = FAISS.load_local('/Users/zhuyq0719/Documents/文稿 - Zhuyq0719的MacBook Air/小区推荐系统RAG/faiss_index', embeddings,
+    vector_store = FAISS.load_local('/Users/zhuyq0719/小区推荐系统RAG/data/faiss_index', embeddings,
         allow_dangerous_deserialization=True)
         
 
@@ -100,15 +101,25 @@ if uploaded_file is not None:
 st.title("PDF/网页文档智能问答")
 
 user_input = st.text_input("请输入你的问题：")
-config = {"configurable": {"thread_id": "def234"}}
+
 
 if st.button("提交") and user_input:
     with st.spinner("正在生成答案..."):
-        final_ai_message = ""
+        final_answer = ""
+        response_placeholder = st.empty()
         for event in agent_executor.stream(
             {"messages": [{"role": "user", "content": user_input}]},
             stream_mode="values",
-            config=config,
+            config={"configurable": {"thread_id": "def234"}},
         ):
-            response = event["messages"][-1].pretty_print()
+            if "messages" in event:
+                
+                messages = event["messages"]
+                for message in messages:
+                    if isinstance(message, AIMessage):
+                        partial_answer = message.content
+                        final_answer += partial_answer
+                        response_placeholder.markdown(final_answer + "▌")
+
+        response_placeholder.markdown(final_answer)
             
